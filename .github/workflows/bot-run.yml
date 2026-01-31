@@ -33,6 +33,5 @@ jobs:
       env:
         # 使用 GitHub Secrets 存储敏感信息
         API_URL: ${{ secrets.API_URL }}
-        OAUTH2_CLIENT_ID: ${{ secrets.OAUTH2_CLIENT_ID }}
-        OAUTH2_CLIENT_SECRET: ${{ secrets.OAUTH2_CLIENT_SECRET }}
+        OAUTH2_ACCESS_TOKEN: ${{ secrets.OAUTH2_ACCESS_TOKEN }}
       run: node bot.js
