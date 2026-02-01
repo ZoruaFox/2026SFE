@@ -230,9 +230,11 @@ async function updateLeaderboard(bot, participants) {
  * 在"（以下排行约每小时更新一次）"之后添加最近更新时间
  */
 function updateTimestamp(content) {
-    // 获取当前时间（UTC+8）
+    // 获取当前时间并转换为 UTC+8（中国标准时间）
     const now = new Date();
-    const utc8Time = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+    
+    // 正确计算 UTC+8 时间：先获取 UTC 时间，再加上 8 小时
+    const utc8Time = new Date(now.getTime() + (now.getTimezoneOffset() * 60 * 1000) + (8 * 60 * 60 * 1000));
     
     // 格式化时间：xxxx年xx月xx日 xx:xx:xx UTC+8
     const year = utc8Time.getUTCFullYear();
@@ -259,11 +261,14 @@ function updateTimestamp(content) {
     const nextLineStart = content.indexOf('\n', afterTarget) + 1;
     
     // 检查是否已存在时间戳行
+    // 时间戳搜索范围：在目标文本后的前100个字符内查找
+    // 这个范围足够覆盖紧跟目标文本的时间戳行，同时避免误匹配页面其他位置的时间戳
+    const TIMESTAMP_SEARCH_RANGE = 100;
     const existingTimestampPattern = /\{\{center\|（最近更新：.*?\）\}\}/;
     const contentAfterTarget = content.substring(nextLineStart);
     const timestampMatch = contentAfterTarget.match(existingTimestampPattern);
     
-    if (timestampMatch && contentAfterTarget.indexOf(timestampMatch[0]) < 100) {
+    if (timestampMatch && contentAfterTarget.indexOf(timestampMatch[0]) < TIMESTAMP_SEARCH_RANGE) {
         // 如果已存在时间戳（在目标文本后100个字符内），则替换它
         const oldTimestampIndex = nextLineStart + contentAfterTarget.indexOf(timestampMatch[0]);
         const oldTimestampEnd = oldTimestampIndex + timestampMatch[0].length;
