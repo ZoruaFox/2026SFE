@@ -85,7 +85,7 @@ function updateUserPageContent(wikitext, count, score) {
 /**
  * Format score to 2 decimal places
  * @param {number} score - The score to format
- * @returns {number} The formatted score
+ * @returns {number} Score rounded to 2 decimal places
  */
 function formatScore(score) {
     return Math.round(score * 100) / 100;
