@@ -203,7 +203,7 @@ async function updateLeaderboard(bot, participants) {
                 let userDisplay = `[[User:${p.username}|${p.username}]]`;
                 if (markNewStar && !p.isVeteran) {
                     // 使用显眼的样式标记新星编者
-                    userDisplay = `🆕 ${userDisplay}`;
+                    userDisplay = `🌱 ${userDisplay}`;
                 }
 
                 // 生成一行：| 排名 || 贡献者 || 已提交条数 || 目前得分 || 贡献详情页
