@@ -24,3 +24,6 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Test files
+test-*.js

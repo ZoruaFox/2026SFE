@@ -108,14 +108,17 @@ async function main() {
             // 解析统计数据：调用工具函数分析表格行数和得分
             const { entryCount, totalScore } = utils.parseContributionPage(wikitext);
             
+            // 格式化分数到小数点后两位
+            const formattedScore = utils.formatScore(totalScore);
+            
             // 检查并更新用户的贡献页头部信息
-            const newContent = utils.updateUserPageContent(wikitext, entryCount, totalScore);
+            const newContent = utils.updateUserPageContent(wikitext, entryCount, formattedScore);
             
             let isUpdated = false;
             // 如果内容有变化（统计数据更新），则写入页面
             if (newContent !== wikitext) {
                 isUpdated = true;
-                console.log(pc.yellow(`[ACTION] 更新页面 ${username}: 条目数=${entryCount}, 得分=${totalScore}`));
+                console.log(pc.yellow(`[ACTION] 更新页面 ${username}: 条目数=${entryCount}, 得分=${formattedScore}`));
                 await bot.save(page.title, newContent, 'bot: 更新贡献状态统计 (2026新春编辑马拉松)');
                 // 礼貌延时：避免短时间大量写入请求，保护弱 API
                 await sleep(config.apiDelayMs); 
@@ -131,7 +134,7 @@ async function main() {
             participants.push({
                 username,
                 entryCount,
-                totalScore,
+                totalScore: formattedScore,
                 isVeteran,
                 pageTitle: page.title,
                 isUpdated

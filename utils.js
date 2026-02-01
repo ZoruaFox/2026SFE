@@ -67,8 +67,8 @@ function parseContributionPage(wikitext) {
  */
 function updateUserPageContent(wikitext, count, score) {
     // Target: {{mbox|type=policy|text={{center|已提交条目数：'''0'''目前得分：'''0'''}}}}
-    // Regex allows specific flexible whitespace
-    const mboxRegex = /(\{\{mbox\|type=policy\|text=\{\{center\|已提交条目数：''')(\d+)('''\s*目前得分：''')(\d+)('''\}\}\}\})/i;
+    // Regex allows specific flexible whitespace and decimal numbers
+    const mboxRegex = /(\{\{mbox\|type=policy\|text=\{\{center\|已提交条目数：''')(\d+)('''\s*目前得分：''')([\d.]+)('''\}\}\}\})/i;
     
     if (mboxRegex.test(wikitext)) {
         return wikitext.replace(mboxRegex, `$1${count}$3${score}$5`);
@@ -82,7 +82,17 @@ function updateUserPageContent(wikitext, count, score) {
  * This requires an API call, so it will be in the main bot.
  */
 
+/**
+ * Format score to 2 decimal places
+ * @param {number} score - The score to format
+ * @returns {number} Score rounded to 2 decimal places
+ */
+function formatScore(score) {
+    return Math.round(score * 100) / 100;
+}
+
 module.exports = {
     parseContributionPage,
-    updateUserPageContent
+    updateUserPageContent,
+    formatScore
 };
