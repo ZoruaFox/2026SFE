@@ -201,6 +201,25 @@ function updatePageContentWithTemplates(originalWikitext, updatedItems) {
                 }
                 newTemplate += '}}';
 
+                // 如果有备注且状态为通过，则添加备注
+                if (item.newRemark && item.newStatus === 'pass') {
+                    // 检查原始模板后面是否已经有备注（包含<br/><small>或类似的HTML标签）
+                    const originalTemplate = item.originalTemplate || `{{2026SFEditasonStatus|${item.status}${item.score ? `|${item.score}` : ''}}}`;
+                    const pos = currentLine.indexOf(originalTemplate);
+                    
+                    if (pos !== -1) {
+                        // 检查原始模板之后是否已经有备注
+                        const afterTemplate = currentLine.substring(pos + originalTemplate.length);
+                        const remarkPattern = /<br\s*\/?><\s*small\s*>(.*?)<\/\s*small\s*>/;
+                        const match = afterTemplate.match(remarkPattern);
+                        
+                        if (!match) {
+                            // 如果没有现有备注，则添加新的备注
+                            newTemplate += `<br/><small>（${item.newRemark}）</small>`;
+                        }
+                    }
+                }
+
                 // 找到原始模板在当前行中的位置并替换（只替换第一个匹配项，以避免误替换其他相同模板）
                 const originalTemplate = item.originalTemplate || `{{2026SFEditasonStatus|${item.status}${item.score ? `|${item.score}` : ''}}}`;
                 const pos = currentLine.indexOf(originalTemplate);

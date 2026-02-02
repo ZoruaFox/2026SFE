@@ -166,6 +166,10 @@
             width: 80px;
         }
         
+        .remark-input {
+            width: 200px;
+        }
+        
         .update-btn {
             background-color: #28a745;
             color: white;
@@ -708,14 +712,51 @@
                                    onchange="updateTemplateScore(${template.id}, this.value)" id="scoreInput${template.id}"
                                    ${(template.newStatus || template.status) !== 'pass' ? 'disabled' : ''}>
                         </div>
+                        <div class="control-group">
+                            <label>备注:</label>
+                            <input type="text" class="remark-input" placeholder="备注内容（可选）" 
+                                   value="${template.remark || ''}" 
+                                   onchange="updateTemplateRemark(${template.id}, this.value)" id="remarkInput${template.id}">
+                        </div>
                         <button class="update-btn" onclick="updateSingleTemplate(${template.id})">更新此模板</button>
                         <button class="update-btn" onclick="openCalculator(${template.id})">打开计算器</button>
+                        <button class="update-btn" onclick="applySequentialOutput(${template.id})">应用计算器结果</button>
                     </div>
                 `;
                 container.appendChild(templateElement);
             });
             
             document.getElementById('resultsSection').classList.remove('hidden');
+        }
+
+        // 更新模板的备注
+        function updateTemplateRemark(templateId, newRemark) {
+            templates[templateId].newRemark = newRemark;
+            updateOutput();
+        }
+
+        // 更新模板的分数
+        function applySequentialOutput(templateId) {
+            if(currentTemplateId !== -1) {
+                const sequentialOutput = document.getElementById('sequentialOutput').textContent;
+                if(sequentialOutput && sequentialOutput !== '等待计算...') {
+                    // 更新模板数据
+                    templates[templateId].newRemark = sequentialOutput;
+                    
+                    // 更新界面上的备注输入框
+                    const remarkInput = document.getElementById(`remarkInput${templateId}`);
+                    if(remarkInput) {
+                        remarkInput.value = sequentialOutput;
+                    }
+                    
+                    updateOutput();
+                    alert(`备注已应用到当前条目：${sequentialOutput}`);
+                } else {
+                    alert('请先计算并生成计算器结果再应用');
+                }
+            } else {
+                alert('没有选择要应用备注的条目');
+            }
         }
 
         // 打开计算器弹窗的函数
@@ -922,11 +963,13 @@
             // 更新对应的选择框和输入框的值
             const statusSelect = document.getElementById(`statusSelect${templateId}`);
             const scoreInput = document.getElementById(`scoreInput${templateId}`);
+            const remarkInput = document.getElementById(`remarkInput${templateId}`);
             
             templates[templateId].newStatus = statusSelect.value;
             if (statusSelect.value === 'pass') {
                 templates[templateId].newScore = scoreInput.value;
             }
+            templates[templateId].newRemark = remarkInput.value;
             
             updateOutput();
         }
@@ -939,17 +982,26 @@
                 if (!template.newScore || template.newScore === '') {
                     template.newScore = (index + 1) * 1; // 示例：按顺序分配分数
                 }
+                
+                // 如果没有备注，则可以设置默认备注（可选）
+                if (!template.newRemark) {
+                    template.newRemark = `批量通过 - 模板 ${index + 1}`;
+                }
             });
             
             // 更新所有界面元素
             templates.forEach((template, index) => {
                 const statusSelect = document.getElementById(`statusSelect${index}`);
                 const scoreInput = document.getElementById(`scoreInput${index}`);
+                const remarkInput = document.getElementById(`remarkInput${index}`);
                 
                 if (statusSelect) statusSelect.value = 'pass';
                 if (scoreInput) {
                     scoreInput.value = template.newScore || template.score;
                     scoreInput.disabled = false;
+                }
+                if (remarkInput) {
+                    remarkInput.value = template.newRemark || template.remark || '';
                 }
             });
             
@@ -974,8 +1026,31 @@
                         }
                         newTemplate += '}}';
                         
-                        // 替换原始模板
-                        output = output.replace(template.original, newTemplate);
+                        // 如果有备注且状态为通过，则添加备注
+                        if (template.newRemark && template.newStatus === 'pass') {
+                            // 检查原始模板后面是否已经有备注（包含<br/><small>或类似的HTML标签）
+                            const originalTemplateEnd = template.absolutePosition + template.original.length;
+                            const afterOriginal = output.substring(originalTemplateEnd);
+                            
+                            // 正则表达式匹配各种可能的备注格式
+                            const remarkPattern = /<br\s*\/?><\s*small\s*>(.*?)<\/\s*small\s*>/;
+                            const match = afterOriginal.match(remarkPattern);
+                            
+                            if (match) {
+                                // 如果已经存在备注，则不重复添加
+                                // 只替换模板本身
+                                output = output.substring(0, template.absolutePosition) + 
+                                        newTemplate + 
+                                        output.substring(originalTemplateEnd);
+                            } else {
+                                // 如果不存在备注，则添加新的备注
+                                newTemplate += `<br/><small>（${template.newRemark}）</small>`;
+                                output = output.replace(template.original, newTemplate);
+                            }
+                        } else {
+                            // 没有备注或不需要添加备注的情况下，正常替换
+                            output = output.replace(template.original, newTemplate);
+                        }
                     }
                 }
                 
@@ -989,7 +1064,8 @@
                 templates.forEach(template => {
                     output += `- 条目: ${template.entryName || 'Unknown'}, 页面: ${template.page || 'Unknown'}\n`;
                     output += `  原状态: ${template.status || '未设置'}, 新状态: ${template.newStatus || template.status}\n`;
-                    output += `  原分数: ${template.score || '无'}, 新分数: ${template.newScore || template.score}\n\n`;
+                    output += `  原分数: ${template.score || '无'}, 新分数: ${template.newScore || template.score}\n`;
+                    output += `  备注: ${template.newRemark || template.remark || '无'}\n\n`;
                 });
                 
                 document.getElementById('outputArea').value = output;
@@ -1012,11 +1088,12 @@
                 pending: templates.filter(t => (t.newStatus || t.status) === 'pending').length,
                 totalScore: templates
                     .filter(t => (t.newStatus || t.status) === 'pass' && (t.newScore !== undefined ? t.newScore : t.score))
-                    .reduce((sum, t) => sum + parseFloat((t.newScore !== undefined ? t.newScore : t.score) || 0), 0)
+                    .reduce((sum, t) => sum + parseFloat((t.newScore !== undefined ? t.newScore : t.score) || 0), 0),
+                withRemarks: templates.filter(t => (t.newRemark || t.remark)).length
             };
             
             document.getElementById('statsText').innerHTML = 
-                `总计: ${stats.total}, 通过: ${stats.passed}, 拒绝: ${stats.rejected}, 待审核: ${stats.pending}, 总分: ${stats.totalScore.toFixed(1)}`;
+                `总计: ${stats.total}, 通过: ${stats.passed}, 拒绝: ${stats.rejected}, 待审核: ${stats.pending}, 总分: ${stats.totalScore.toFixed(1)}, 有备注: ${stats.withRemarks}`;
             document.getElementById('statsDiv').classList.remove('hidden');
         }
         
@@ -1053,6 +1130,7 @@
                     originalTemplate: template.originalTemplate || template.original,
                     newStatus: template.newStatus || template.status,
                     newScore: template.newScore || template.score,
+                    newRemark: template.newRemark || template.remark,
                     status: template.status,
                     score: template.score,
                     absolutePosition: template.absolutePosition,

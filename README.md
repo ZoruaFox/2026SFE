@@ -1,6 +1,6 @@
-# 2026年春节编辑松机器人 (2026 Spring Festival Editathon Bot)
+# 2026年春节编辑松联络员审核工具
 
-这是一个自动化机器人，用于统计参与者在 2026 年春节编辑松中的贡献，并自动更新排行榜。
+这是一个（半）自动化机器人，用于统计参与者在 2026 年春节编辑松中的贡献，并自动更新排行榜。
 
 ## 功能
 
@@ -31,12 +31,27 @@
 ## 运行
 
 ### 本地运行
+#### 更新排行榜和总得分
 ```bash
 node bot.js
 ```
+#### 获取待审核列表
+```bash
+node get_pending_list.js
+```
+#### 审核工具
+先运行：
+```bash
+node review.js
+```
+生成pending_data.json后，打开[review.html](./review.html)并上传。在html下载后导出updated_pages.json。
 
-### GitHub Actions
-本项目包含自动工作流 `.github/workflows/bot-run.yml`，请在 GitHub 仓库的 Secrets 中配置对应的环境变量即可自动定时运行。
+再运行：
+```bash
+node review.js --update-pages
+```
+之后会自动保存修改。
+
 
 ## 许可协议
 
@@ -44,4 +59,4 @@ node bot.js
 
 ## 声明
 
-本仓库代码包含 GitHub Copilot 生成内容。
+本仓库代码包含 GitHub Copilot、通义灵码 生成内容。
