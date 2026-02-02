@@ -391,8 +391,8 @@
             <h3>使用说明：</h3>
             <ol>
                 <li><strong>方式一（手动）</strong>：在下方输入框粘贴Wikitext内容，点击"解析模板"</li>
-                <li><strong>方式二（自动）</strong>：运行 <code>node bot3.js</code>，程序将自动打开此页面</li>
-                <li>审核完成后，点击"完成审核并保存"按钮自动运行 <code>node bot3.js --finish-review</code></li>
+                <li><strong>方式二（自动）</strong>：运行 <code>node review.js</code>，程序将自动打开此页面</li>
+                <li>审核完成后，点击"完成审核并保存"按钮自动运行 <code>node review.js --finish-review</code></li>
             </ol>
         </div>
         
@@ -436,7 +436,7 @@
         
         <div class="completion-message hidden" id="completionMessage">
             <h3>审核完成！</h3>
-            <p>所有更改已保存，正在自动运行 bot3.js 完成页面更新...</p>
+            <p>所有更改已保存，正在自动运行 review.js 完成页面更新...</p>
             <p>请稍等片刻查看结果。</p>
         </div>
         
@@ -626,7 +626,7 @@
             fetch('pending_data.json')
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('未找到 pending_data.json 文件，请先运行 node bot3.js');
+                        throw new Error('未找到 pending_data.json 文件，请先运行 node review.js');
                     }
                     return response.json();
                 })
@@ -642,7 +642,7 @@
                     updateStats();
                 })
                 .catch(error => {
-                    alert(`加载待审核数据失败: ${error.message}\n\n请确保已运行 'node bot3.js' 并生成了 pending_data.json 文件`);
+                    alert(`加载待审核数据失败: ${error.message}\n\n请确保已运行 'node review.js' 并生成了 pending_data.json 文件`);
                     console.error('Error loading pending data:', error);
                 });
         }
@@ -684,9 +684,12 @@
             templates.forEach(template => {
                 const templateElement = document.createElement('div');
                 templateElement.className = 'template-item';
+                entry_name = template.entryName && template.entryName.startsWith('[[') && template.entryName.endsWith(']]')
+    ? `- 条目: <a href=\"https://www.qiuwenbaike.cn/wiki/${template.entryName.slice(2, -2)}\" target=\"_blank\">${template.entryName.slice(2, -2)}</a>, 页面: ${template.page || 'Unknown'}\n`
+    : `- 条目: ${template.entryName || 'Unknown'}, 页面: ${template.page || 'Unknown'}\n`;
                 templateElement.innerHTML = `
                     <div class="template-header">
-                        <span>条目: ${template.entryName || 'Unknown'} | 页面: ${template.page || 'Unknown'}</span>
+                        <span>${entry_name}</span>
                         <span>原状态: ${template.status || '未设置'} ${template.score ? '| 原分数: ' + template.score : ''}</span>
                     </div>
                     <div class="template-content">${template.originalLine || template.original}</div>
@@ -984,9 +987,7 @@
                 output += "待更新的项目:\n";
                 
                 templates.forEach(template => {
-                    output += template.entryName && template.entryName.startsWith('[[') && template.entryName.endsWith(']]')
-    ? `- 条目: <a href=\"https://www.qiuwenbaike.cn/wiki/${template.entryName.slice(2, -2)}\" target=\"_blank\">${template.entryName.slice(2, -2)}</a>, 页面: ${template.page || 'Unknown'}\n`
-    : `- 条目: ${template.entryName || 'Unknown'}, 页面: ${template.page || 'Unknown'}\n`;
+                    output += `- 条目: ${template.entryName || 'Unknown'}, 页面: ${template.page || 'Unknown'}\n`;
                     output += `  原状态: ${template.status || '未设置'}, 新状态: ${template.newStatus || template.status}\n`;
                     output += `  原分数: ${template.score || '无'}, 新分数: ${template.newScore || template.score}\n\n`;
                 });
@@ -1103,7 +1104,7 @@
             // 注意：在浏览器环境中无法直接执行Node.js脚本
             // 因此我们需要提示用户执行命令
             setTimeout(() => {
-                alert('审核数据已保存！\n\n请在终端中运行以下命令完成页面更新：\nnode bot3.js --finish-review');
+                alert('审核数据已保存！\n\n请在终端中运行以下命令完成页面更新：\nnode review.js --finish-review');
                 
                 // 恢复按钮状态
                 document.getElementById('finishReviewBtn').disabled = false;
