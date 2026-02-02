@@ -242,8 +242,10 @@ function updateTimestamp(content) {
     // 获取当前时间并转换为 UTC+8（中国标准时间）
     const now = new Date();
     
-    // 正确计算 UTC+8 时间：先获取 UTC 时间，再加上 8 小时
-    const utc8Time = new Date(now.getTime() + (now.getTimezoneOffset() * 60 * 1000) + (8 * 60 * 60 * 1000));
+    // 正确计算 UTC+8 时间：
+    // 直接在 UTC 时间戳基础上增加 8 小时
+    const utc8Ms = now.getTime() + (8 * 60 * 60 * 1000);
+    const utc8Time = new Date(utc8Ms);
     
     // 格式化时间：xxxx年xx月xx日 xx:xx:xx UTC+8
     const year = utc8Time.getUTCFullYear();
