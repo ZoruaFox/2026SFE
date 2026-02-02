@@ -27,3 +27,6 @@ Thumbs.db
 
 # Test files
 test-*.js
+
+pending_data.json
+updated_pages.json
