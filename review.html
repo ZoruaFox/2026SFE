@@ -700,7 +700,7 @@
                             <label>状态:</label>
                             <select class="status-select" onchange="updateTemplate(${template.id}, this.value)" id="statusSelect${template.id}">
                                 <option value="pending" ${(template.newStatus || template.status) === 'pending' ? 'selected' : ''}>待审核</option>
-                                <option value="reject" ${(template.newStatus || template.status) === 'reject' ? 'selected' : ''}>拒绝</option>
+                                <option value="fail" ${(template.newStatus || template.status) === 'fail' ? 'selected' : ''}>拒绝</option>
                                 <option value="pass" ${(template.newStatus || template.status) === 'pass' ? 'selected' : ''}>通过</option>
                             </select>
                         </div>
@@ -1076,7 +1076,7 @@
             const stats = {
                 total: templates.length,
                 passed: templates.filter(t => (t.newStatus || t.status) === 'pass').length,
-                rejected: templates.filter(t => (t.newStatus || t.status) === 'reject').length,
+                failed: templates.filter(t => (t.newStatus || t.status) === 'fail').length,
                 pending: templates.filter(t => (t.newStatus || t.status) === 'pending').length,
                 totalScore: templates
                     .filter(t => (t.newStatus || t.status) === 'pass' && (t.newScore !== undefined ? t.newScore : t.score))
@@ -1085,7 +1085,7 @@
             };
             
             document.getElementById('statsText').innerHTML = 
-                `总计: ${stats.total}, 通过: ${stats.passed}, 拒绝: ${stats.rejected}, 待审核: ${stats.pending}, 总分: ${stats.totalScore.toFixed(1)}, 有备注: ${stats.withRemarks}`;
+                `总计: ${stats.total}, 通过: ${stats.passed}, 拒绝: ${stats.failed}, 待审核: ${stats.pending}, 总分: ${stats.totalScore.toFixed(1)}, 有备注: ${stats.withRemarks}`;
             document.getElementById('statsDiv').classList.remove('hidden');
         }
         
