@@ -2,7 +2,7 @@
 
 这是一个（半）自动化机器人，用于统计参与者在 2026 年春节编辑松中的贡献，并自动更新排行榜。
 
-代码衍生自HYYY_bot（仓库：https://github.com/ZoruaFox/2026SFE）和https://github.com/hcx2012Git/tools-for-26SFE。
+代码衍生自HYYY_bot（仓库：https://github.com/ZoruaFox/2026SFE ）和 https://github.com/hcx2012Git/tools-for-26SFE 。
 
 ## 功能
 
