@@ -96,7 +96,9 @@ async function findPendingReviews(bot) {
             const wikitext = content.revisions[0].content;
             
             const result = utils.parseContributionPageWithDetails(wikitext);
-            const pendingItems = result.items.filter(item => item.status.toLowerCase() === 'pending' || item.status.trim() === '');
+            const pendingItems = result.items.filter(item =>
+                ['pending', '待审核', 'doing', '审核中'].includes(item.status.toLowerCase())
+            );
 
             for (const item of pendingItems) {
                 pendingData.push({
