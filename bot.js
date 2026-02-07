@@ -39,6 +39,49 @@ async function getOAuth2Token() {
     }
 }
 
+// 新增函数：查询用户的导入日志并计算导入得分
+async function calculateImportScore(bot, username) {
+    const namespaces = [0, 6, 10, 206, 828];
+    let importScore = 0;
+
+    for (const namespace of namespaces) {
+        const logQuery = {
+            "action": "query",
+            "format": "json",
+            "list": "logevents",
+            "formatversion": "2",
+            "letype": "import",
+            "lestart": "2026-01-31T16:00:00.000Z",
+            "leend": "2026-02-07T03:45:54.000Z",
+            "ledir": "newer",
+            "leuser": username,
+            "lenamespace": namespace,
+            "lelimit": "max"
+        };
+
+        try {
+            const result = await bot.request(logQuery);
+            const logEvents = result.query.logevents || [];
+            
+            console.log(pc.blue(`[INFO] 用户 ${username} 在命名空间 ${namespace} 的导入日志数量: ${logEvents.length}`));
+            
+            if (namespace === 0) {
+                importScore += logEvents.length * 0.02;
+            } else {
+                importScore += logEvents.length * 0.01;
+            }
+        } catch (error) {
+            console.error(pc.red(`[ERROR] 查询用户 ${username} 导入日志失败 (命名空间 ${namespace}):`), error);
+        }
+    }
+    
+    // 保留五位小数
+    importScore = Math.round(importScore * 100000) / 100000;
+    console.log(pc.green(`[INFO] 用户 ${username} 的导入得分为: ${importScore}`));
+    
+    return importScore;
+}
+
 // 封装主逻辑，增加错误处理，确保脚本退出状态正确
 async function main() {
     // 1. 获取 OAuth 2.0 Token
@@ -55,6 +98,19 @@ async function main() {
             maxlag: 5 
         }
     });
+
+    const originalRequest = bot.request;
+    bot.request = async function(params) {
+    // 确保headers中的Authorization值只包含ASCII字符
+    if(this.requestOptions.headers && this.requestOptions.headers.Authorization) {
+        const authHeader = this.requestOptions.headers.Authorization;
+        const cleanAuthHeader = authHeader.split('').filter(char => 
+            char.charCodeAt(0) <= 255
+        ).join('');
+        this.requestOptions.headers.Authorization = cleanAuthHeader;
+    }
+    return originalRequest.call(this, params);
+};
 
     // 3. 注入 Header
     bot.requestOptions.headers = {
@@ -90,8 +146,7 @@ async function main() {
 
     const participants = [];
 
-
-    // 3. 遍历每个用户的贡献页
+    // 6. 遍历每个用户的贡献页
     for (const page of pages) {
         // 过滤掉非贡献页（例如可能是模板或说明页，虽然前缀已限制，但后缀校验更安全）
         if (!page.title.endsWith('的贡献')) continue;
@@ -106,27 +161,61 @@ async function main() {
             const wikitext = content.revisions[0].content;
             
             // 解析统计数据：调用工具函数分析表格行数和得分
-            const { entryCount, totalScore } = utils.parseContributionPage(wikitext);
+            const parsedData = utils.parseContributionPageWithDetails(wikitext);
+            let { entryCount, totalScore, items } = parsedData;
+            
+            // 检查是否存在导入日志行（参考 utils.js 第40行）
+            const hasImportLogRow = items.some(item => 
+                item.originalLine.includes('type=import') && 
+                (item.originalLine.includes('Special:日志') || item.originalLine.includes('Special:Log'))
+            );
+            
+            let importScore = 0;
+            if (hasImportLogRow) {
+                console.log(pc.yellow(`[INFO] 检测到用户 ${username} 的贡献页包含导入日志行，正在计算导入得分...`));
+                importScore = await calculateImportScore(bot, username);
+                
+                // 更新总分
+                totalScore += importScore;
+                
+                // 更新 items 数组中的相关条目
+                items = items.map(item => {
+                    if (item.originalLine.includes('type=import') && 
+                        (item.originalLine.includes('Special:日志') || item.originalLine.includes('Special:Log'))) {
+                        return {
+                            ...item,
+                            score: importScore.toString(),
+                            status: 'import'
+                        };
+                    }
+                    return item;
+                });
+            }
             
             // 格式化分数到小数点后两位
             const formattedScore = utils.formatScore(totalScore);
             
             // 检查并更新用户的贡献页头部信息
-            const newContent = utils.updateUserPageContent(wikitext, entryCount, formattedScore);
+            let newContent = utils.updateUserPageContent(wikitext, entryCount, formattedScore);
+            
+            // 如果有导入得分，还需要更新表格中的导入日志行
+            if (hasImportLogRow && importScore > 0) {
+                newContent = utils.updatePageContentWithTemplates(newContent, items);
+            }
             
             let isUpdated = false;
             // 如果内容有变化（统计数据更新），则写入页面
             if (newContent !== wikitext) {
                 isUpdated = true;
-                console.log(pc.yellow(`[ACTION] 更新页面 ${username}: 条目数=${entryCount}, 得分=${formattedScore}`));
-                await bot.save(page.title, newContent, 'bot: 更新贡献状态统计 (2026新春编辑马拉松)');
+                console.log(pc.yellow(`[ACTION] 更新页面 ${username}: 条目数=${entryCount}, 总得分=${formattedScore}, 导入得分=${importScore}`));
+                await bot.save(page.title, newContent, `bot: 更新总得分和条目数${importScore > 0 ? `（含导入得分 ${importScore}）` : ''}`);
                 // 礼貌延时：避免短时间大量写入请求，保护弱 API
                 await sleep(config.apiDelayMs); 
             } else {
                 console.log(pc.gray(`[INFO] ${username} 的页面数据无需更新。`));
             }
 
-            // 检查用户的资历状态，用于区分“熟练编者”和“新星编者”榜单
+            // 检查用户的资历状态，用于区分"熟练编者"和"新星编者"榜单
             // 规则：2026年2月1日之前是否有 50 次编辑
             const isVeteran = await checkVeteranStatus(bot, username);
 
@@ -135,6 +224,7 @@ async function main() {
                 username,
                 entryCount,
                 totalScore: formattedScore,
+                importScore,
                 isVeteran,
                 pageTitle: page.title,
                 isUpdated
@@ -145,7 +235,7 @@ async function main() {
         }
     }
 
-    // 4. 更新总排行榜
+    // 7. 更新总排行榜
     await updateLeaderboard(bot, participants);
 
     if (process.env.GITHUB_STEP_SUMMARY) {
@@ -154,7 +244,7 @@ async function main() {
 }
 
 /**
- * 检查用户是否为“熟练编者”
+ * 检查用户是否为"熟练编者"
  * 定义：在 2026-02-01 之前已完成 50 次编辑
  */
 async function checkVeteranStatus(bot, username) {
@@ -207,7 +297,7 @@ async function updateLeaderboard(bot, participants) {
                 }
 
                 // 生成一行：| 排名 || 贡献者 || 已提交条数 || 目前得分 || 贡献详情页
-                return `|-
+                return `|- 
 | ${index + 1} || ${userDisplay} || ${p.entryCount} || ${p.totalScore} || [[${p.pageTitle}|查看页面]]`;
             }).join('\n');
         };
@@ -226,7 +316,7 @@ async function updateLeaderboard(bot, participants) {
         content = replaceTableContent(content, '新星编者排行榜', newStarRows);
 
         // 写入更新后的排行榜
-        await bot.save(leaderboardTitle, content, 'bot: 更新排行榜数据 (2026春节编辑松)');
+        await bot.save(leaderboardTitle, content, 'bot: 更新排行榜（2026年春节编辑松）');
         console.log(pc.green('[SUCCESS] 总排行榜已更新。'));
 
     } catch (err) {
@@ -400,6 +490,6 @@ function generateGithubSummary(participants) {
     }
 }
 
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms)); // 礼貌延时
 
-main().catch(console.error);
+main().catch(console.error); // 捕获主函数未处理的异常
