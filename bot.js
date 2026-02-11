@@ -55,7 +55,7 @@ async function calculateImportScore(bot, username) {
             "formatversion": "2",
             "letype": "import",
             "lestart": "2026-01-31T16:00:00.000Z",
-            "leend": "2026-02-07T03:45:54.000Z",
+            "leend": new Date().toISOString(),
             "ledir": "newer",
             "leuser": username,
             "lenamespace": namespace,
