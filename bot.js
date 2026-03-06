@@ -55,7 +55,7 @@ async function calculateImportScore(bot, username) {
             "formatversion": "2",
             "letype": "import",
             "lestart": "2026-01-31T16:00:00.000Z",
-            "leend": new Date().toISOString(),
+            "leend": "2026-03-02T16:00:00.000Z",
             "ledir": "newer",
             "leuser": username,
             "lenamespace": namespace,
@@ -76,7 +76,7 @@ async function calculateImportScore(bot, username) {
             
             // 在每次命名空间查询后添加小延时
             if (i < namespaces.length - 1) {
-                await sleep(500); // 500ms的小延时
+                await sleep(300); // 300ms的小延时
             }
             
         } catch (error) {
